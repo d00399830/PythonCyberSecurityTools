@@ -34,7 +34,7 @@ def extractFile(zFile, password):
 def dictZipAttack(zipfilename, dictPassList):
     zfile = zipfile.Zipfile(zipfilename)
     passFile = open(dictPassList)
-    for line passFile.readlines():
+    for line in passFile.readlines():
         #Format the password list as unique passwords on each line
         password = line.strip('\n')
         guess = extractFile(zfile, password)
